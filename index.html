@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SultraByte AI Studio — Enterprise Workspace</title>
+    <style>
+        :root {
+            --bg-base: #131314;
+            --bg-surface: #1e1f20;
+            --bg-elevated: #282a2c;
+            --bg-input: #1e1f20;
+            --border-subtle: #3c4043;
+            --border-focus: #8ab4f8;
+            --text-primary: #e3e3e3;
+            --text-secondary: #c4c7c5;
+            --text-muted: #8e918f;
+            --google-blue: #1a73e8;
+            --google-blue-hover: #1b66ca;
+            --google-blue-light: #8ab4f8;
+            --danger-red: #ea4335;
+            --danger-red-hover: #d93025;
+            --thought-glow: #d3bbff;
+            --thought-bg: #1c1829;
+            --thought-border: #3f365d;
+            --font-main: -apple-system, BlinkMacSystemFont, "Google Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-code: "Cascadia Code", "Fira Code", Consolas, Monaco, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-main); background-color: var(--bg-base); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
+
+        /* Left Sidebar */
+        #sidebar { width: 260px; background: var(--bg-surface); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-brand { padding: 14px 18px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; }
+        .brand-title { font-size: 0.95rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .brand-badge { background: var(--google-blue); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+        .btn-new-chat { margin: 12px 14px 8px; padding: 9px 12px; background: #2b2c2f; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-primary); font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-new-chat:hover { background: #35373a; border-color: var(--border-focus); }
+        .session-list { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+        .session-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; transition: 0.15s; }
+        .session-item:hover, .session-item.active { background: var(--bg-elevated); color: #fff; }
+        .sidebar-footer { padding: 10px 14px; background: #18191a; border-top: 1px solid var(--border-subtle); font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; }
+        .auto-save-badge { display: flex; align-items: center; gap: 5px; color: #34d399; font-weight: 600; margin-top: 4px; }
+
+        /* Main Workspace */
+        #workspace { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); position: relative; }
+        
+        /* Topbar Controls */
+        .topbar { height: 52px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: var(--bg-surface); }
+        .topbar-left { display: flex; align-items: center; gap: 10px; }
+        .chip-pill { background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary); padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        select { background: transparent; color: var(--text-primary); border: none; font-size: 0.78rem; font-weight: 500; outline: none; cursor: pointer; }
+        select option { background: var(--bg-surface); color: var(--text-primary); }
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
+        .btn-tool { background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.15s; }
+        .btn-tool:hover { background: #383a3d; color: #fff; }
+        .btn-tool.active { background: #1e3558; border-color: var(--google-blue-light); color: var(--google-blue-light); }
+
+        /* Chat Stream */
+        #chat-scroll { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+        .message-row { max-width: 880px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+
+        /* Collapsible Card Container */
+        .card-box { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; transition: 0.2s border-color; }
+        .card-box:hover { border-color: #55585d; }
+        .card-header { padding: 8px 14px; background: #242628; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; user-select: none; }
+        .card-header-title { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+        .card-actions { display: flex; align-items: center; gap: 6px; }
+        .btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+        .btn-icon:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .card-content { padding: 14px 16px; font-size: 0.92rem; line-height: 1.65; word-break: break-word; }
+        .card-box.collapsed .card-content { display: none; }
+
+        /* Card Styles */
+        .user-card { border-left: 3px solid var(--google-blue); }
+        .thought-card { background: var(--thought-bg); border: 1px solid var(--thought-border); }
+        .thought-card .card-header { background: #231e34; border-color: var(--thought-border); }
+        .thought-card .card-header-title { color: var(--thought-glow); }
+        .thought-body { font-family: var(--font-code); font-size: 0.84rem; color: #b6afd1; white-space: pre-wrap; line-height: 1.55; }
+        .citation-card { background: #151f2e; border: 1px solid #23426e; }
+        .citation-card .card-header { background: #1c2b40; border-color: #23426e; }
+        .citation-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip-link { background: #1c2f4a; border: 1px solid #2c4f7c; color: var(--google-blue-light); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+        .chip-link:hover { background: #26436b; text-decoration: underline; }
+
+        /* Code Blocks */
+        .code-container { background: #000; border: 1px solid #2e3035; border-radius: 8px; margin: 12px 0; overflow: hidden; }
+        .code-bar { padding: 6px 12px; background: #18191a; border-bottom: 1px solid #2e3035; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-code); font-size: 0.75rem; color: #8e918f; }
+        pre { padding: 12px; overflow-x: auto; font-family: var(--font-code); font-size: 0.85rem; color: #79c0ff; line-height: 1.5; }
+        code { font-family: var(--font-code); }
+
+        /* Live Stopwatch Banner */
+        .live-timer-banner { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 600; color: var(--google-blue-light); padding: 8px 12px; background: #182333; border: 1px solid #23426e; border-radius: 8px; margin-bottom: 10px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(138,180,248,0.3); border-radius: 50%; border-top-color: var(--google-blue-light); animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .interrupted-badge { display: inline-block; background: #3d1a1a; border: 1px solid #ea4335; color: #f28b82; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; margin-top: 8px; }
+
+        /* Floating Input Bar */
+        #input-container { padding: 12px 20px 20px; background: transparent; }
+        .input-wrapper { max-width: 880px; margin: 0 auto; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        .input-wrapper:focus-within { border-color: var(--google-blue-light); }
+        textarea { width: 100%; background: transparent; border: none; outline: none; color: #fff; font-family: inherit; font-size: 0.92rem; resize: none; min-height: 48px; max-height: 150px; line-height: 1.5; }
+        .input-actions { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Tombol Run & Intervensi */
+        .btn-send { background: var(--google-blue); color: #fff; border: none; padding: 7px 18px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-send:hover { background: var(--google-blue-hover); }
+        .btn-send.intervene { background: var(--danger-red); animation: pulse 1.5s infinite; }
+        .btn-send.intervene:hover { background: var(--danger-red-hover); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+
+        /* Toast Alert */
+        #toast { position: fixed; bottom: 85px; right: 25px; background: #282a2c; border: 1px solid var(--border-focus); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; display: none; align-items: center; gap: 8px; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT SIDEBAR -->
+    <div id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                SultraByte <span class="brand-badge">STUDIO</span>
+            </div>
+        </div>
+        <button class="btn-new-chat" onclick="createNewSession()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + New Prompt Session
+        </button>
+        <div class="session-list" id="sessionList"></div>
+        <div class="sidebar-footer">
+            Vault: <span id="ctxRepo" style="color: #fff; font-weight:600;">default_repo</span><br>
+            Branch: <span id="ctxBranch" style="color: #fff; font-weight:600;">main / v1.0</span>
+            <div class="auto-save-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span id="autoSaveLabel">Auto-saved</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <div id="workspace">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="chip-pill">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <select id="modelSelect">
+                        <option value="qwen2.5-coder:14b">Qwen 2.5 Coder 14B (Lead Coder)</option>
+                        <option value="hermes3:8b">Hermes 3 8B (System Architect)</option>
+                    </select>
+                </div>
+                <label class="chip-pill" style="cursor: pointer;">
+                    <input type="checkbox" id="webSearchToggle" checked>
+                    <span>🌐 Live Web Search</span>
+                </label>
+            </div>
+
+            <div class="topbar-right">
+                <select id="jumpNavigator" onchange="jumpToMessage(this.value)" style="background: #282a2c; border: 1px solid var(--border-subtle); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem;">
+                    <option value="">🎯 Jump to Request...</option>
+                </select>
+
+                <button class="btn-tool active" id="btnAutoScroll" onclick="toggleAutoScroll()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                    Auto-Scroll: ON
+                </button>
+
+                <button class="btn-tool" onclick="manualSaveDisk()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                    Save Disk
+                </button>
+                <button class="btn-tool" onclick="exportMarkdown()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Export .MD
+                </button>
+            </div>
+        </div>
+
+        <!-- CHAT STREAM -->
+        <div id="chat-scroll"></div>
+
+        <!-- FLOATING INPUT BAR -->
+        <div id="input-container">
+            <div class="input-wrapper">
+                <textarea id="promptInput" placeholder="Tanyakan apa saja atau berikan instruksi pengembangan koding..." onkeydown="handleKeyDown(event)"></textarea>
+                <div class="input-actions">
+                    <span id="inputHelperText" style="font-size: 0.72rem; color: var(--text-muted);">Enter untuk kirim, Shift+Enter untuk baris baru</span>
+                    <button class="btn-send" id="btnMainAction" onclick="handleMainAction()">Run Prompt ➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="toastMsg">Teks berhasil disalin</span>
+    </div>
+
+    <script>
+        const OLLAMA_ENDPOINT = "http://localhost:11434";
+        let sessions = JSON.parse(localStorage.getItem("sb_gemini_sessions") || "[]");
+        let activeId = localStorage.getItem("sb_gemini_active_id") || "";
+        let autoScroll = true;
+        let isGenerating = false;
+        let abortController = null;
+
+        function init() {
+            if (sessions.length === 0) {
+                createNewSession();
+            } else {
+                if (!activeId) activeId = sessions[0].id;
+                renderSessions();
+                renderMessages();
+            }
+            loadContext();
+
+            // GLOBAL ESCAPE KEYBOARD INTERVENTION LISTENER
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "Escape" && isGenerating) {
+                    e.preventDefault();
+                    triggerIntervention();
+                }
+            });
+        }
+
+        async function loadContext() {
+            try {
+                const res = await fetch("/api/context");
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("ctxRepo").innerText = data.repository || "default_repo";
+                    document.getElementById("ctxBranch").innerText = `${data.branch || "main"} / ${data.version || "v1.0"}`;
+                }
+            } catch (e) {}
+        }
+
+        function createNewSession() {
+            if (isGenerating) triggerIntervention();
+            const id = "sess_" + Date.now();
+            sessions.unshift({ id: id, title: "Untitled Prompt", messages: [] });
+            activeId = id;
+            saveSessions();
+            renderSessions();
+            renderMessages();
+        }
+
+        function saveSessions() {
+            localStorage.setItem("sb_gemini_sessions", JSON.stringify(sessions));
+            localStorage.setItem("sb_gemini_active_id", activeId);
+            updateAutoSaveTimestamp();
+        }
+
+        function updateAutoSaveTimestamp() {
+            const now = new Date();
+            document.getElementById("autoSaveLabel").innerText = `Saved ${now.toLocaleTimeString()}`;
+        }
+
+        function getActiveSession() {
+            return sessions.find(s => s.id === activeId) || sessions[0];
+        }
+
+        function renderSessions() {
+            const list = document.getElementById("sessionList");
+            list.innerHTML = "";
+            sessions.forEach(s => {
+                const item = document.createElement("div");
+                item.className = `session-item ${s.id === activeId ? "active" : ""}`;
+                item.innerHTML = `<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">${escapeHtml(s.title)}</span>
+                    <span onclick="deleteSession(event, '${s.id}')" style="color:var(--text-muted); cursor:pointer;">✕</span>`;
+                item.onclick = () => { 
+                    if (isGenerating) triggerIntervention();
+                    activeId = s.id; 
+                    saveSessions(); 
+                    renderSessions(); 
+                    renderMessages(); 
+                };
+                list.appendChild(item);
+            });
+        }
+
+        function deleteSession(e, id) {
+            e.stopPropagation();
+            if (isGenerating) triggerIntervention();
+            sessions = sessions.filter(s => s.id !== id);
+            if (sessions.length === 0) createNewSession();
+            else { activeId = sessions[0].id; saveSessions(); renderSessions(); renderMessages(); }
+        }
+
+        function updateJumpNavigator() {
+            const nav = document.getElementById("jumpNavigator");
+            nav.innerHTML = `<option value="">🎯 Jump to Request (${getActiveSession().messages.filter(m => m.role==='user').length})...</option>`;
+            let uIdx = 0;
+            getActiveSession().messages.forEach((m, idx) => {
+                if (m.role === "user") {
+                    uIdx++;
+                    const opt = document.createElement("option");
+                    opt.value = `msg-user-${idx}`;
+                    opt.innerText = `[#${uIdx}] ${m.content.substring(0, 32)}...`;
+                    nav.appendChild(opt);
+                }
+            });
+        }
+
+        function jumpToMessage(id) {
+            if (!id) return;
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById("btnAutoScroll");
+            if (autoScroll) {
+                btn.className = "btn-tool active";
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Auto-Scroll: ON`;
+            } else {
+                btn.className = "btn-tool";
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Auto-Scroll: OFF`;
+            }
+        }
+
+        function renderMessages() {
+            const scroll = document.getElementById("chat-scroll");
+            scroll.innerHTML = "";
+            const session = getActiveSession();
+            if (!session) return;
+
+            session.messages.forEach((m, idx) => {
+                const row = document.createElement("div");
+                row.className = "message-row";
+                row.id = m.role === "user" ? `msg-user-${idx}` : `msg-asst-${idx}`;
+
+                if (m.role === "user") {
+                    row.innerHTML = `
+                    <div class="card-box user-card" id="card-${idx}">
+                        <div class="card-header">
+                            <span class="card-header-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                User Prompt Request
+                            </span>
+                            <div class="card-actions">
+                                <button class="btn-icon" onclick="copyCardContent('card-${idx}')" title="Copy Prompt Text">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn-icon" onclick="toggleCard('card-${idx}')" title="Collapse / Expand">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-content">${escapeHtml(m.content)}</div>
+                    </div>`;
+                } else {
+                    let assistantHTML = "";
+
+                    // Citation Box
+                    if (m.sources && m.sources.length > 0) {
+                        assistantHTML += `
+                        <div class="card-box citation-card" id="card-cite-${idx}">
+                            <div class="card-header">
+                                <span class="card-header-title">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    Grounding Sources (${m.sources.length})
+                                </span>
+                                <div class="card-actions">
+                                    <button class="btn-icon" onclick="copyCitationContent('card-cite-${idx}')" title="Copy Citations">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    </button>
+                                    <button class="btn-icon" onclick="toggleCard('card-cite-${idx}')">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="citation-chips">
+                                    ${m.sources.map(s => `<a href="${escapeHtml(s.url)}" target="_blank" class="chip-link">🔗 ${escapeHtml(s.title)}</a>`).join('')}
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+
+                    // Thought Process Card
+                    if (m.thoughts) {
+                        assistantHTML += `
+                        <div class="card-box thought-card" id="card-th-${idx}">
+                            <div class="card-header">
+                                <span class="card-header-title">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                    Thought Process ${m.thoughtDuration ? `(${m.thoughtDuration})` : ''}
+                                </span>
+                                <div class="card-actions">
+                                    <button class="btn-icon" onclick="copyCardContent('card-th-${idx}')" title="Copy Thoughts">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    </button>
+                                    <button class="btn-icon" onclick="toggleCard('card-th-${idx}')">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-content thought-body">${escapeHtml(m.thoughts)}</div>
+                        </div>`;
+                    }
+
+                    // AI Main Response Card
+                    assistantHTML += `
+                    <div class="card-box" id="card-resp-${idx}">
+                        <div class="card-header">
+                            <span class="card-header-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                Model Response Output
+                            </span>
+                            <div class="card-actions">
+                                <button class="btn-icon" onclick="copyCardContent('card-resp-${idx}')" title="Copy Markdown">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                                <button class="btn-icon" onclick="toggleCard('card-resp-${idx}')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            ${formatMarkdown(m.content)}
+                            ${m.interrupted ? `<div class="interrupted-badge">⚠️ [Intervensi: Dihentikan oleh Anda]</div>` : ''}
+                        </div>
+                    </div>`;
+
+                    row.innerHTML = assistantHTML;
+                }
+                scroll.appendChild(row);
+            });
+
+            updateJumpNavigator();
+            if (autoScroll) scroll.scrollTop = scroll.scrollHeight;
+        }
+
+        function toggleCard(cardId) {
+            const el = document.getElementById(cardId);
+            if (el) el.classList.toggle("collapsed");
+        }
+
+        function copyCardContent(cardId) {
+            const el = document.querySelector(`#${cardId} .card-content`);
+            if (el) {
+                navigator.clipboard.writeText(el.innerText || el.textContent);
+                showToast("Konten berhasil disalin!");
+            }
+        }
+
+        function copyCitationContent(cardId) {
+            const links = Array.from(document.querySelectorAll(`#${cardId} .chip-link`)).map(a => `${a.innerText}: ${a.href}`).join("\n");
+            navigator.clipboard.writeText(links);
+            showToast("Daftar referensi disalin!");
+        }
+
+        function copyCodeSnippet(btn) {
+            const pre = btn.closest(".code-container").querySelector("pre code");
+            if (pre) {
+                navigator.clipboard.writeText(pre.innerText || pre.textContent);
+                showToast("Kode program disalin!");
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            document.getElementById("toastMsg").innerText = msg;
+            t.style.display = "flex";
+            setTimeout(() => { t.style.display = "none"; }, 2000);
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleMainAction();
+            }
+        }
+
+        function setGeneratingState(generating) {
+            isGenerating = generating;
+            const btn = document.getElementById("btnMainAction");
+            const helper = document.getElementById("inputHelperText");
+            if (generating) {
+                btn.className = "btn-send intervene";
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> ⏹️ Intervensi AI (Esc)`;
+                helper.innerHTML = `Tekan <strong style="color:var(--danger-red);">Esc</strong> atau klik tombol merah untuk membatalkan proses AI`;
+            } else {
+                btn.className = "btn-send";
+                btn.innerHTML = `Run Prompt ➤`;
+                helper.innerHTML = `Enter untuk kirim, Shift+Enter untuk baris baru`;
+            }
+        }
+
+        function handleMainAction() {
+            if (isGenerating) {
+                triggerIntervention();
+            } else {
+                sendPrompt();
+            }
+        }
+
+        function triggerIntervention() {
+            if (abortController) {
+                abortController.abort();
+                showToast("⚠️ Intervensi Aktif: Proses AI Dihentikan!");
+            }
+        }
+
+        async function sendPrompt() {
+            const input = document.getElementById("promptInput");
+            const text = input.value.trim();
+            if (!text) return;
+
+            const session = getActiveSession();
+            const model = document.getElementById("modelSelect").value;
+            const useSearch = document.getElementById("webSearchToggle").checked;
+
+            if (session.messages.length === 0) {
+                session.title = text.substring(0, 28) + "...";
+                renderSessions();
+            }
+
+            session.messages.push({ role: "user", content: text });
+            input.value = "";
+            renderMessages();
+
+            abortController = new AbortController();
+            setGeneratingState(true);
+
+            let webContext = "";
+            let sourcesList = [];
+
+            // 1. LIVE WEB SEARCH GROUNDING
+            if (useSearch) {
+                const liveSearchRow = document.createElement("div");
+                liveSearchRow.className = "message-row";
+                liveSearchRow.id = "liveSearchRow";
+                liveSearchRow.innerHTML = `<div class="live-timer-banner"><span class="spinner"></span> <span id="searchTimerText">Searching Web Grounding... (00:00.0)</span></div>`;
+                document.getElementById("chat-scroll").appendChild(liveSearchRow);
+                
+                const sStart = Date.now();
+                const sInterval = setInterval(() => {
+                    const el = document.getElementById("searchTimerText");
+                    if (el) {
+                        const sec = ((Date.now() - sStart) / 1000).toFixed(1);
+                        el.innerText = `Searching Web Grounding... (${sec}s)`;
+                    }
+                }, 100);
+
+                try {
+                    const sRes = await fetch(`/api/search?q=${encodeURIComponent(text)}`, { signal: abortController.signal });
+                    if (sRes.ok) {
+                        const sData = await sRes.json();
+                        sourcesList = sData.results || [];
+                        if (sourcesList.length > 0) {
+                            webContext = "\n\n=== WEB GROUNDING SOURCES ===\n" + 
+                                sourcesList.map((s, i) => `[Source ${i+1}] Title: ${s.title}\nURL: ${s.url}\nSnippet: ${s.snippet}`).join("\n\n");
+                        }
+                    }
+                } catch (e) {
+                    if (e.name === 'AbortError') {
+                        clearInterval(sInterval);
+                        if (document.getElementById("liveSearchRow")) document.getElementById("liveSearchRow").remove();
+                        setGeneratingState(false);
+                        return;
+                    }
+                }
+                clearInterval(sInterval);
+                if (document.getElementById("liveSearchRow")) document.getElementById("liveSearchRow").remove();
+            }
+
+            // 2. LIVE STREAMING WITH ACTIVE INTERVENTION
+            const asstMsg = { role: "assistant", content: "", thoughts: "", thoughtDuration: "", sources: sourcesList, interrupted: false };
+            session.messages.push(asstMsg);
+
+            const scroll = document.getElementById("chat-scroll");
+            const streamRow = document.createElement("div");
+            streamRow.className = "message-row";
+            streamRow.id = "activeStreamRow";
+            streamRow.innerHTML = `
+                <div class="live-timer-banner" id="streamTimerBanner"><span class="spinner"></span> <span id="streamTimerText">Menginisialisasi ${model}... (00:00.0)</span></div>
+                <div class="card-box thought-card" id="streamThoughtBox" style="display:none;">
+                    <div class="card-header"><span class="card-header-title">✨ Thinking Process (Live Streaming)...</span></div>
+                    <div class="card-content thought-body" id="streamThoughtBody"></div>
+                </div>
+                <div class="card-box" id="streamRespBox" style="display:none;">
+                    <div class="card-header"><span class="card-header-title">Model Response Output</span></div>
+                    <div class="card-content" id="streamRespBody">...</div>
+                </div>`;
+            scroll.appendChild(streamRow);
+            if (autoScroll) scroll.scrollTop = scroll.scrollHeight;
+
+            const tStart = Date.now();
+            let thoughtDurationFinal = "";
+            const tInterval = setInterval(() => {
+                const el = document.getElementById("streamTimerText");
+                if (el) {
+                    const sec = ((Date.now() - tStart) / 1000).toFixed(1);
+                    el.innerText = `Model Generating Token... (${sec}s)`;
+                }
+            }, 100);
+
+            const systemPrompt = `Anda adalah SultraByte AI Studio Lead Software & DevOps Specialist di bawah arahan Pengguna.
+Aturan Wajib:
+1. Jawab komprehensif, akurat, modular, dan bersih.
+2. Selalu awali dengan penalaran langkah kerja Anda di dalam tag <think>...</think>, lalu berikan respon akhir Anda.${webContext}`;
+
+            let rawStream = "";
+
+            try {
+                const response = await fetch(`${OLLAMA_ENDPOINT}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            ...session.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+                        ],
+                        stream: true
+                    }),
+                    signal: abortController.signal
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split("\n");
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            try {
+                                const parsed = JSON.parse(line);
+                                if (parsed.message && parsed.message.content) {
+                                    rawStream += parsed.message.content;
+
+                                    const hasOpenThink = rawStream.includes("<think>");
+                                    const hasCloseThink = rawStream.includes("</think>");
+
+                                    if (hasOpenThink && !hasCloseThink) {
+                                        document.getElementById("streamThoughtBox").style.display = "block";
+                                        const currentThought = rawStream.replace("<think>", "");
+                                        document.getElementById("streamThoughtBody").innerText = currentThought;
+                                    } else if (hasCloseThink) {
+                                        document.getElementById("streamThoughtBox").style.display = "block";
+                                        document.getElementById("streamRespBox").style.display = "block";
+                                        
+                                        if (!thoughtDurationFinal) {
+                                            thoughtDurationFinal = ((Date.now() - tStart) / 1000).toFixed(1) + "s";
+                                        }
+
+                                        const parts = rawStream.split("</think>");
+                                        const finalThought = parts[0].replace("<think>", "").trim();
+                                        const currentResp = parts[1] || "";
+
+                                        document.getElementById("streamThoughtBody").innerText = finalThought;
+                                        document.getElementById("streamRespBody").innerHTML = formatMarkdown(currentResp);
+                                    } else {
+                                        document.getElementById("streamRespBox").style.display = "block";
+                                        document.getElementById("streamRespBody").innerHTML = formatMarkdown(rawStream);
+                                    }
+
+                                    if (autoScroll) scroll.scrollTop = scroll.scrollHeight;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+
+                clearInterval(tInterval);
+
+                const thinkMatch = rawStream.match(/<think>([\s\S]*?)<\/think>/);
+                if (thinkMatch) {
+                    asstMsg.thoughts = thinkMatch[1].trim();
+                    asstMsg.thoughtDuration = thoughtDurationFinal || (((Date.now() - tStart)/1000).toFixed(1) + "s");
+                    asstMsg.content = rawStream.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                } else {
+                    asstMsg.content = rawStream;
+                }
+
+            } catch (err) {
+                clearInterval(tInterval);
+                if (err.name === 'AbortError') {
+                    asstMsg.interrupted = true;
+                    const thinkMatch = rawStream.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
+                    if (thinkMatch) {
+                        asstMsg.thoughts = thinkMatch[1].replace("<think>", "").trim();
+                        asstMsg.thoughtDuration = ((Date.now() - tStart)/1000).toFixed(1) + "s (Diintervensi)";
+                        asstMsg.content = rawStream.replace(/<think>[\s\S]*?(?:<\/think>|$)/, '').trim() || "(Proses dihentikan sebelum menghasilkan respon)";
+                    } else {
+                        asstMsg.content = rawStream || "(Proses dihentikan oleh pengguna)";
+                    }
+                } else {
+                    asstMsg.content = `[Gagal terhubung ke Ollama: ${err.message}. Pastikan daemon localhost:11434 aktif]`;
+                }
+            } finally {
+                clearInterval(tInterval);
+                if (document.getElementById("activeStreamRow")) document.getElementById("activeStreamRow").remove();
+                setGeneratingState(false);
+                saveSessions();
+                renderMessages();
+                manualSaveDisk();
+            }
+        }
+
+        async function manualSaveDisk() {
+            const session = getActiveSession();
+            try {
+                const res = await fetch("/api/save_session", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(session)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`Disimpan ke Disk (${data.time})`);
+                    updateAutoSaveTimestamp();
+                }
+            } catch (e) {
+                showToast("Tersimpan di Local Storage");
+            }
+        }
+
+        function exportMarkdown() {
+            const session = getActiveSession();
+            let md = `# ${session.title}\n\n`;
+            session.messages.forEach(m => {
+                md += `### [${m.role.toUpperCase()}]\n\n`;
+                if (m.thoughts) md += `> **Thought Process**:\n> ${m.thoughts.replace(/\n/g, '\n> ')}\n\n`;
+                md += `${m.content}\n\n`;
+                if (m.interrupted) md += `*⚠️ [Intervensi: Dihentikan manual oleh Anda]*\n\n`;
+                md += `---\n\n`;
+            });
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${session.id}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("File .MD berhasil diunduh!");
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function formatMarkdown(text) {
+            if (!text) return "";
+            let clean = text.replace(/<think>[\s\S]*?<\/think>/, '');
+            let escaped = escapeHtml(clean);
+
+            // Code Blocks dengan Copy Button
+            escaped = escaped.replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, (m, lang, code) => {
+                const language = lang || "plaintext";
+                return `
+                <div class="code-container">
+                    <div class="code-bar">
+                        <span>${language}</span>
+                        <button class="btn-icon" onclick="copyCodeSnippet(this)" style="color:#8ab4f8; font-size:0.72rem; gap:4px; display:flex; align-items:center;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            Copy code
+                        </button>
+                    </div>
+                    <pre><code>${code}</code></pre>
+                </div>`;
+            });
+
+            escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+            escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            escaped = escaped.replace(/^### (.*$)/gim, '<h3 style="margin:14px 0 6px; color:#fff;">$1</h3>');
+            escaped = escaped.replace(/^## (.*$)/gim, '<h2 style="margin:16px 0 8px; color:#fff;">$1</h2>');
+            escaped = escaped.replace(/^# (.*$)/gim, '<h1 style="margin:18px 0 10px; color:#fff;">$1</h1>');
+            escaped = escaped.replace(/^\* (.*$)/gim, '<li style="margin-left:20px;">$1</li>');
+            escaped = escaped.replace(/^- (.*$)/gim, '<li style="margin-left:20px;">$1</li>');
+            escaped = escaped.replace(/\n/g, '<br>');
+            return escaped;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

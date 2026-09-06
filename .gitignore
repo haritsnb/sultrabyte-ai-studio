@@ -1,0 +1,15 @@
+# Model AI & Bobot Neural Network
+models/
+bin/
+
+# Vaults & Data Privat Klien
+vaults/
+
+# Runtime States & Cache
+net_lock.flag
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.chroma/
+*.log
